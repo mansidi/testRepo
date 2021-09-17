@@ -1,5 +1,5 @@
 pipeline {
-    agent any
+    agent { label 'tomcat2' }
     
     stages {
         /*stage ('Initialize') {
@@ -49,31 +49,42 @@ pipeline {
                     sh /opt/apache-maven-3.8.1/bin/mvn clean install'''
             }
         }
-
-        stage ('tomcat workspace') {
+        
+        stage ('docker service status check') {
             
             steps {
-                 sh ''' cd /usr/local && rm -rf /usr/local/apache-tomcat-9.0.52*
-                wget https://mirrors.estointernet.in/apache/tomcat/tomcat-9/v9.0.52/bin/apache-tomcat-9.0.52.tar.gz
-                     tar -xvf apache-tomcat-9.0.52.tar.gz
-                     echo "export CATALINA_HOME="/usr/local/apache-tomcat-9.0.52"" >> ~/.bashrc
-                     source ~/.bashrc
-                     cd /usr/local/apache-tomcat-9.0.52/webapps
-		             cd /usr/local/apache-tomcat-9.0.52/bin '''
+               
+                 sh '''#!/bin/bash
+                        value1=myjavaapp
+                        value=$(docker service ls | head -4 |  tail -1 | awk \'{ print $2 }\')
+                        if [ $value == myjavaapp ]
+                        then
+                           echo -e "\\e[1;31m =======stopping service $value===============  \\e[0m"
+                           sudo docker service rm myjavaapp && echo -e "\\e[1;31m =====stopped and removed the service $value1========= \\e[0m"
+                        else
+                           echo "============= no service found $value1  ====================="
+                        fi'''
+            }
+        }
+
+        stage ('docker deployment') {
+            
+            steps {
+                 sh ''' cd /root/.m2/repository/in/ezeon/SpringContactApp/1.0-SNAPSHOT && cp -r *.war /home/ec2-user/docker
+                 docker login -u mansiju03 -p Mansi@12345
+                 docker tag testimage:latest mansiju03/study_12:$BUILD_NUMBER
+                 docker push mansiju03/study_12:$BUILD_NUMBER
+                 cd /home/ec2-user/docker && docker build -t testimage .
+                 docker service create --replicas 4 --name myjavaapp -p 8080:8080 testimage:latest
+                
+                 '''
 		             
 
             }
         }
+    
             
-        stage ('deployment') {
-            
-            steps {
-                
-             sh '''  cd /root/.m2/repository/in/ezeon/SpringContactApp/1.0-SNAPSHOT && cp -r *.war  /usr/local/apache-tomcat-9.0.52/webapps 
-                     cd /usr/local/apache-tomcat-9.0.52/bin && sh startup.sh '''
-                     
-            }
-        }
+        
 
         }
         
