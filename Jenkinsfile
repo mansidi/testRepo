@@ -75,7 +75,7 @@ pipeline {
                  docker tag testimage:latest mansiju03/study_12:$BUILD_NUMBER
                  docker push mansiju03/study_12:$BUILD_NUMBER
                  cd /home/ec2-user/docker && docker build -t testimage .
-                 docker service create --replicas 4 --name myjavaapp -p 8080:8080 testimage:latest
+                 docker service create --replicas 1 --name myjavaapp -p 8080:8080 testimage:latest
                 
                  '''
 		             
